@@ -50,8 +50,16 @@ namespace BFTIndex
 
         public MatchedDocument[] Search(string query)
         {
+            Console.WriteLine("Запрос: " + query);
             numberOfDocuments = documentDictionary.Count;
             query = NormalizeQuery(query);
+            string[] textout = new string[2];
+            //for (int i = 0; i < 2; i++)
+            //{
+            //    textout[i] = Regex.Matches(query, "\"(.*?)\"", RegexOptions.IgnoreCase)[i].Value.Trim('"');
+            //    Console.WriteLine(textout[i]);
+            //}
+            //Console.WriteLine(textout);
             NormalizeText();
 
             string [] keywords = DeleteStopWords(query);
@@ -65,8 +73,28 @@ namespace BFTIndex
             MatchedDocument[] matchedDocuments = CreateMatchedDocuments();
 
             ClearTempListsAfterReq();
+            //Console.WriteLine("ID документа попавшего в поиск: " +matchedDocuments[0].Id);
             return matchedDocuments;   
         }
+
+        //private string[] FindSubquery(string str)
+        //{
+        //    string[] subguery = Regex.Matches(str, "\"(.*?)\"").Cast<Match>().Select(m=>m.Value.Trim('"')).ToArray();
+        //    string[] query = Regex.Replace(str, "\"(.*?)\"", string.Empty).Trim(' ').Split(' ', ',', '-');
+        //    if (query[0] != "")
+        //    {
+        //        query = string.Join(" ", query.Where(word => !"".Contains(word))).Split(',', '-', ' ');
+        //        string[] finalquery = subguery.Concat(query).ToArray();
+        //        return finalquery;
+        //    }
+        //    else
+        //    {
+        //        return subguery;
+        //    }
+                
+            
+        //    //return finalquery;
+        //}
 
         private MatchedDocument[] CreateMatchedDocuments()
         {
@@ -93,7 +121,14 @@ namespace BFTIndex
         {
             foreach (var item in documentDictionary)
             {
+                Console.WriteLine("ТЕКСТ: " + item.Value);
+                //string kkk = string.Join(" ", item.Value.Where(word => !stopwords.Contains(word)));
                 string[] docStrings = item.Value.Split(' ', ',', '-');
+                string[] textWithoutStopWords = string.Join(" ", docStrings.Where(word => !stopwords.Contains(word))).Split(' ', ',', '-');
+                string textWithoutStopWordss = string.Join(" ", textWithoutStopWords.Where(word => !"  ".Contains(word)));
+
+                //string[] docStringss = textWithoutStopWords.Split(' ', ',', '-');
+                //string textWithoutStopWordss = string.Join(" ", docStringss.Where(word => !stopwords.Contains(word)));
                 int numberofallwords = docStrings.Length;
                 int[] numberOfEntry = new int[keywords.Length];
                 for (int i = 0; i < keywords.Length; i++)
@@ -108,7 +143,7 @@ namespace BFTIndex
                         if (!CheckNotWordsInText(checkedstr))
                         {
                             string pattern = @"\b" + keywords[i] + @"\b";
-                            numberOfEntry[i] = Regex.Matches(item.Value, pattern, RegexOptions.IgnoreCase).Count;
+                            numberOfEntry[i] = Regex.Matches(textWithoutStopWordss, pattern, RegexOptions.IgnoreCase).Count;
                         }
                         else
                             numberOfEntry[i] = 0;
@@ -183,10 +218,37 @@ namespace BFTIndex
 
         private string[] DeleteStopWords(string query)
         {
-            query = query.ToLower();
+            string[] subquery = FindSubquery(query);
+            string[] query1 = Regex.Replace(query, "\"(.*?)\"", string.Empty).Trim(' ').ToLower().Split(' ', ',', '-');
+            string[] query11 = string.Join(" ", query1.Where(word => !stopwords.Contains(word))).Split(',', '-', ' ','\"');
+            if (query1[0] != "")
+            {
+                query11 = string.Join(" ", query11.Where(word => (!("").Contains(word) && !"\"".Contains(word)))).Split(',', '-', ' ','\"');
+                string[] finalquery1 = subquery.Concat(query11).ToArray();
+                return finalquery1;
+            }
+            else
+            {
+                //subquery = string.Join(" ", subquery.Where(word => !("  ").Contains(word))).Split(',', '-', ' ', '\"');
+                return subquery;
+            }
+
+            //query = query.ToLower();
+            //string[] stringsWithoutSep = query.Split(',', '-', ' ');
+            //string[] keywords = string.Join(" ", stringsWithoutSep.Where(word => !stopwords.Contains(word))).Split(',', '-', ' ');
+            //string str = string.Join(" ",keywords );
+            //string[] finalquery= FindSubquery(str);
+            //foreach (var i in finalquery)
+            //    Console.WriteLine(i);
+            //return finalquery;
+        }
+
+        private string[] FindSubquery(string query)
+        {
             string[] stringsWithoutSep = query.Split(',', '-', ' ');
-            string[] keywords = string.Join(" ", stringsWithoutSep.Where(word => !stopwords.Contains(word))).Split(',', '-', ' ');
-            return keywords;
+            string keywords = string.Join(" ", stringsWithoutSep.Where(word => (!stopwords.Contains(word) && !"    ".Contains(word))));
+            string[] subguery = Regex.Matches(keywords, "\"(.*?)\"").Cast<Match>().Select(m => m.Value.Trim('"')).ToArray();
+            return subguery;
         }
 
         private string NormalizeQuery(string query)
